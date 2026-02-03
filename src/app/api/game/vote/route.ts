@@ -141,7 +141,8 @@ export async function POST(req: Request) {
       .map(([id]) => id)
       .sort();
 
-    if (topIds.length !== 1) {
+    const aliveNow = aliveCount ?? 0;
+    if (winnerCount === 1 && topIds.length === aliveNow) {
       await supabase
         .from("rounds")
         .update({ phase: "result", eliminated_player_id: null })

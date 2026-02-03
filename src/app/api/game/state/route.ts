@@ -128,14 +128,6 @@ export async function GET(req: Request) {
     .eq("room_id", room.id)
     .eq("is_alive", true);
 
-  const { data: readyRows } = await supabase
-    .from("readies")
-    .select("guest_id")
-    .eq("room_id", room.id)
-    .eq("round_id", round.id);
-
-  const readyGuestIds = new Set((readyRows ?? []).map((r) => r.guest_id));
-
   const { data: players } = await supabase
     .from("players")
     .select("id, name, is_host, is_alive, guest_id")
@@ -148,16 +140,8 @@ export async function GET(req: Request) {
       name: p.name,
       isHost: p.is_host,
       isAlive: p.is_alive,
-      isReady: readyGuestIds.has(p.guest_id),
+      isReady: false,
     }));
-
-  const { data: meReadyRow } = await supabase
-    .from("readies")
-    .select("id")
-    .eq("room_id", room.id)
-    .eq("round_id", round.id)
-    .eq("guest_id", guestId)
-    .maybeSingle();
 
   const { count: voteCount } = await supabase
     .from("votes")
@@ -175,13 +159,29 @@ export async function GET(req: Request) {
 
   const eliminatedId =
     ((round as any).eliminated_player_id as string | null | undefined) ?? null;
-  const eliminated = eliminatedId
+
+  const eliminatedBase = eliminatedId
     ? playerList.find((p) => p.id === eliminatedId) ?? null
     : null;
 
-  const readyAliveCount = playerList.filter(
-    (p) => p.isAlive && readyGuestIds.has(p.guestId)
-  ).length;
+  const { data: eliminatedRoleRow } = eliminatedId
+    ? await supabase
+        .from("players")
+        .select("role")
+        .eq("room_id", room.id)
+        .eq("id", eliminatedId)
+        .maybeSingle()
+    : { data: null };
+
+  const eliminated = eliminatedBase
+    ? { ...eliminatedBase, role: eliminatedRoleRow?.role ?? null }
+    : null;
+
+  const isTieVote =
+    round.phase === "result" &&
+    !eliminatedId &&
+    (aliveCount ?? 0) > 0 &&
+    (voteCount ?? 0) >= (aliveCount ?? 0);
 
   return NextResponse.json({
     room: {
@@ -212,12 +212,13 @@ export async function GET(req: Request) {
       phase: round.phase,
       eliminatedPlayerId: eliminatedId,
     },
-    counts: { alive: aliveCount ?? 0, ready: readyAliveCount },
-    flags: { meReady: Boolean(meReadyRow) },
+    counts: { alive: aliveCount ?? 0, ready: 0 },
+    flags: { meReady: false },
     voting: {
       votes: voteCount ?? 0,
       meVoted: Boolean(myVote),
       eliminated,
+      tied: isTieVote,
     },
     players: playerList,
   });

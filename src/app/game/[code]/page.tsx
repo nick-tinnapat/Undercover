@@ -35,7 +35,16 @@ type GameState = {
     meVoted: boolean;
     eliminated:
       | null
-      | { id: string; name: string; isHost: boolean; isAlive: boolean; isReady: boolean; guestId: string };
+      | {
+          id: string;
+          name: string;
+          role?: string | null;
+          isHost: boolean;
+          isAlive: boolean;
+          isReady: boolean;
+          guestId: string;
+        };
+    tied?: boolean;
   };
   players?: Array<{
     id: string;
@@ -311,6 +320,9 @@ export default function GamePage() {
 
   const lastConfettiKeyRef = useRef<string>("");
   const starterByRoundRef = useRef<Record<string, string>>({});
+  const tieAdvanceKeyRef = useRef<string>("");
+  const tiePopupDismissedKeyRef = useRef<string>("");
+  const [activeTiePopupKey, setActiveTiePopupKey] = useState<string>("");
 
   const handleConfetti = () => {
     confetti({
@@ -364,6 +376,34 @@ export default function GamePage() {
 
   const starterName =
     state?.round.id ? starterByRoundRef.current[state.round.id] ?? "" : "";
+
+  const tieVote = Boolean(state?.voting?.tied);
+  const currentTieKey = `${state?.round.id ?? ""}:tie`;
+  const showTiePopup =
+    Boolean(activeTiePopupKey) &&
+    tiePopupDismissedKeyRef.current !== activeTiePopupKey;
+
+  const dismissTiePopup = async () => {
+    tiePopupDismissedKeyRef.current = activeTiePopupKey;
+    setActiveTiePopupKey("");
+    if (state?.me.isHost) {
+      await nextVote();
+    }
+  };
+
+  useEffect(() => {
+    if (!tieVote) {
+      tieAdvanceKeyRef.current = "";
+      return;
+    }
+  }, [tieVote]);
+
+  useEffect(() => {
+    if (!tieVote) return;
+    if (activeTiePopupKey) return;
+    if (!state?.round.id) return;
+    setActiveTiePopupKey(currentTieKey);
+  }, [activeTiePopupKey, currentTieKey, state?.round.id, tieVote]);
 
   const winnerText =
     roomStatus === "ended_undercover"
@@ -470,6 +510,46 @@ export default function GamePage() {
   return (
     <div className="min-h-screen px-4 py-10">
       <div className="mx-auto w-full max-w-xl">
+        {showTiePopup ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 px-4"
+          >
+            <motion.div
+              initial={{ scale: 0.96, y: 10, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 140, damping: 16 }}
+              className="w-full max-w-sm rounded-3xl border border-white/10 bg-black/60 p-5 backdrop-blur-md"
+            >
+              <div className="text-xs text-zinc-400">VOTE RESULT</div>
+              <div className="mt-1 text-2xl font-semibold text-zinc-50">
+                It&apos;s a tie
+              </div>
+              <div className="mt-2 text-sm text-zinc-300">
+                Everyone received the same number of votes. No one was
+                eliminated.
+              </div>
+              <div className="mt-4 text-xs text-zinc-500">
+                {state?.me.isHost
+                  ? "Close to advance to the next round."
+                  : "Waiting for the host to advance to the next round."}
+              </div>
+
+              <div className="mt-4">
+                <Button
+                  color="primary"
+                  className="w-full"
+                  isLoading={continuing}
+                  onPress={dismissTiePopup}
+                >
+                  Close
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        ) : null}
+
         {gameEnded && showWinner ? (
           <motion.div
             initial={{ opacity: 0 }}
@@ -919,6 +999,11 @@ export default function GamePage() {
                   {eliminated ? (
                     <div className="mt-1 text-lg font-semibold text-zinc-50">
                       Eliminated: {eliminated.name}
+                      {eliminated.role ? (
+                        <span className="ml-2 rounded-full border border-white/10 bg-black/30 px-2 py-0.5 text-xs font-medium text-zinc-200">
+                          {eliminated.role}
+                        </span>
+                      ) : null}
                     </div>
                   ) : (
                     <div className="mt-1 text-sm text-zinc-300">No elimination.</div>
