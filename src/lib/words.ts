@@ -66,6 +66,7 @@ const WORD_POOL: WordPair[] = [
   { common: "พายุหิมะ", undercover: "หิมะถล่ม"},
   { common: "พิคาชู", undercover: "กระรอกแมว"},
   { common: "กางเกงใน", undercover: "ชุดชั้นใน"},
+  { common: "เบนซิน", undercover: "ดีเซล"},
 ];
 
 export function pickWordPair(): WordPair {
