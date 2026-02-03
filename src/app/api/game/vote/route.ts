@@ -132,14 +132,24 @@ export async function POST(req: Request) {
 
     let winnerId: string | null = null;
     let winnerCount = -1;
-    const sortedKeys = Array.from(counts.keys()).sort();
-    for (const k of sortedKeys) {
-      const c = counts.get(k) ?? 0;
-      if (c > winnerCount) {
-        winnerCount = c;
-        winnerId = k;
-      }
+    for (const c of counts.values()) {
+      if (c > winnerCount) winnerCount = c;
     }
+
+    const topIds = Array.from(counts.entries())
+      .filter(([, c]) => c === winnerCount)
+      .map(([id]) => id)
+      .sort();
+
+    if (topIds.length !== 1) {
+      await supabase
+        .from("rounds")
+        .update({ phase: "result", eliminated_player_id: null })
+        .eq("id", round.id);
+      return NextResponse.json({ ok: true });
+    }
+
+    winnerId = topIds[0] ?? null;
 
     if (winnerId) {
       const { data: eliminatedPlayer } = await supabase

@@ -54,7 +54,7 @@ export async function POST(req: Request) {
 
   const { data: round, error: roundError } = await supabase
     .from("rounds")
-    .select("id, phase")
+    .select("id, phase, round_number")
     .eq("room_id", room.id)
     .order("round_number", { ascending: false })
     .limit(1)
@@ -68,9 +68,26 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "NOT_IN_RESULT" }, { status: 409 });
   }
 
-  await supabase.from("votes").delete().eq("room_id", room.id).eq("round_id", round.id);
+  await supabase
+    .from("votes")
+    .delete()
+    .eq("room_id", room.id)
+    .eq("round_id", round.id);
 
-  await supabase.from("rounds").update({ phase: "describe", eliminated_player_id: null }).eq("id", round.id);
+  const nextRoundNumber = Number(round.round_number ?? 0) + 1;
+  const { error: insertError } = await supabase.from("rounds").insert({
+    room_id: room.id,
+    round_number: nextRoundNumber,
+    phase: "describe",
+    eliminated_player_id: null,
+  });
+
+  if (insertError) {
+    return NextResponse.json(
+      { error: "ROUND_CREATE_FAILED", detail: insertError.message },
+      { status: 500 }
+    );
+  }
 
   return NextResponse.json({ ok: true });
 }
