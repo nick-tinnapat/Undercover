@@ -171,6 +171,18 @@ export async function POST(req: Request) {
         (p) => p.role === "mrwhite"
       ).length;
 
+      if (civilianAlive === 0 && undercoverAlive > 0 && mrwhiteAlive > 0) {
+        await supabase
+          .from("rooms")
+          .update({ status: "ended_undercover_mrwhite" })
+          .eq("id", room.id);
+        await supabase
+          .from("rounds")
+          .update({ phase: "result", eliminated_player_id: winnerId })
+          .eq("id", round.id);
+        return NextResponse.json({ ok: true });
+      }
+
       if (undercoverAlive === 0 && civilianAlive === 1 && mrwhiteAlive === 1) {
         const { data: mrwhitePlayer } = await supabase
           .from("players")

@@ -368,6 +368,8 @@ export default function GamePage() {
   const winnerText =
     roomStatus === "ended_undercover"
       ? "Undercover wins"
+      : roomStatus === "ended_undercover_mrwhite"
+        ? "Undercover & Mr.White win"
       : roomStatus === "ended_civilian"
         ? "Civilian wins"
         : roomStatus === "ended_mrwhite"
