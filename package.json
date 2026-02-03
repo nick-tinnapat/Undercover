@@ -9,12 +9,22 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@heroui/button": "^2.2.30",
+    "@heroui/card": "^2.2.27",
+    "@heroui/input": "^2.4.31",
+    "@heroui/react": "^2.8.8",
+    "@heroui/spinner": "^2.2.27",
+    "@supabase/ssr": "^0.8.0",
+    "@supabase/supabase-js": "^2.93.3",
+    "canvas-confetti": "^1.9.4",
+    "framer-motion": "^12.30.0",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
